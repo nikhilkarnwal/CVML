@@ -1,0 +1,6 @@
+*__pycache*
+*.pyc
+build*
+dist*
+*.egg*
+*idea*
