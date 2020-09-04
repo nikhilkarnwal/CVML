@@ -9,6 +9,29 @@ from .text import TextNet
 class VQANet(nn.Module):
     def __init__(self, words_dim, vec_dim, lstm_dim, lstm_layers,
                  vis_dim, atten_mid_dim, glimpses, classes):
+        """
+        VQANet is composite neural net consisting of following networks -
+        TextNet:
+        Attention:
+        Classifier:
+
+        :param words_dim: size of vocab
+        :type words_dim: int
+        :param vec_dim: size of word embeddings
+        :type vec_dim: int
+        :param lstm_dim: number of hidden units in lstm
+        :type lstm_dim: int
+        :param lstm_layers: number of lstm layers in lstm net
+        :type lstm_layers: int
+        :param vis_dim: number of channels in input image feature map
+        :type vis_dim: int
+        :param atten_mid_dim: number of channels in mid of attention layer
+        :type atten_mid_dim: int
+        :param glimpses: number of channels in output of attention layer
+        :type glimpses: int
+        :param classes: number of classes to classify into
+        :type classes: int
+        """
         super().__init__()
 
         self.text_net = TextNet(
@@ -16,8 +39,6 @@ class VQANet(nn.Module):
             vec_dim=vec_dim,
             hid_dim=lstm_dim,
             num_layers=lstm_layers)
-
-        self.vision = FeatureExtractor()
 
         self.attention = Attention(
             vis_dim=vis_dim,
@@ -39,9 +60,8 @@ class VQANet(nn.Module):
                 if m.bias is not None:
                     nn.init.zeros_(m.bias)
 
-    def forward(self, query, q_len, image):
+    def forward(self, query, q_len, vis_feat):
         word_vec = self.text_net(query, q_len, True)
-        vis_feat = self.vision(image)
         vis_feat = vis_feat / (vis_feat.norm(p=2, dim=1, keepdim=True).expand_as(vis_feat) + 1e-8)
         attn = self.attention(word_vec, vis_feat)
         attn_vis = apply_attention(attn, vis_feat)
