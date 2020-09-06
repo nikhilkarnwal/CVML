@@ -16,12 +16,13 @@ class M3:
 
     def add_meter(self, key, meter):
         self.meters[key] = meter
+        return self.meters[key]
 
     def get_meter(self, key):
         return self.meters[key]
 
     def to_dict(self):
-        return {k: json.dumps(v) for k, v in self.meters.items()}
+        return {k: json.dumps(v.__dict__) for k, v in self.meters.items()}
 
     def encode(self):
         return json.dumps(self.meters)

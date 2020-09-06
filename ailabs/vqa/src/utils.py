@@ -46,16 +46,15 @@ def path_for(train=False, val=False, test=False, question=False, answer=False):
     assert not (
             test and answer), 'loading answers from test split not supported'  # if you want to eval on test, you need to implement loading of a VQA Dataset without given answers yourself
     if train:
-        split = 'train2014'
+        split = 'train'  # 'train2014'
     elif val:
-        split = 'val2014'
+        split = 'val'  # 'val2014'
     else:
-        split = 'test2015'
+        split = 'test'  # 'test2015'
     if question:
-        fmt = '{0}_{1}_{2}_questions.json'
+        s = config.vqa_data['{}_{}'.format(split, 'q')]
     else:
-        fmt = '{1}_{2}_annotations.json'
-    s = fmt.format(config.task, config.dataset, split)
+        s = config.vqa_data['{}_{}'.format(split, 'a')]
     return os.path.join(config.qa_path, s)
 
 
@@ -67,3 +66,11 @@ def get_transform(target_size, central_fraction=1.0):
         transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              std=[0.229, 0.224, 0.225]),
     ])
+
+
+def getattr(obj):
+    return {name: obj.__getattribute__(name) for name in dir(obj) if not name.startswith('_')}
+
+
+def print_obj(obj):
+    print(json.dumps(getattr(obj), indent=4))

@@ -43,12 +43,12 @@ class VQANet(nn.Module):
         self.attention = Attention(
             vis_dim=vis_dim,
             mid_dim=atten_mid_dim,
-            query_dim=vec_dim,
+            query_dim=lstm_dim,
             glimpses=glimpses
         )
 
         self.classifier = Classifier(
-            in_features=glimpses * vis_dim + vec_dim,
+            in_features=glimpses * vis_dim + lstm_dim,
             mid_features=1024,
             out_features=classes,
             drop=0.5
@@ -61,9 +61,9 @@ class VQANet(nn.Module):
                     nn.init.zeros_(m.bias)
 
     def forward(self, query, q_len, vis_feat):
-        word_vec = self.text_net(query, q_len, True)
+        word_vec = self.text_net(query, q_len, True).squeeze(0)
         vis_feat = vis_feat / (vis_feat.norm(p=2, dim=1, keepdim=True).expand_as(vis_feat) + 1e-8)
-        attn = self.attention(word_vec, vis_feat)
+        attn = self.attention(vis_feat, word_vec)
         attn_vis = apply_attention(attn, vis_feat)
         combined = torch.cat([attn_vis, word_vec], dim=1)
         answer = self.classifier(combined)

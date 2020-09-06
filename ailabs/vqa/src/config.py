@@ -4,7 +4,7 @@ class Config:
     # Network related details
     classes = 3000  # same as max_answer
     glimpses = 2
-    attn_mid_dim = 1024
+    attn_mid_dim = 512
     visual_dim = 2048
     lstm_layer = 1
     lstm_dim = 1024
@@ -15,11 +15,12 @@ class Config:
     train_path = 'mscoco/train2014'  # directory of training images
     val_path = 'mscoco/val2014'  # directory of validation images
     test_path = 'mscoco/test2015'  # directory of test images
-    preprocessed_path = './resnet-14x14.h5'  # path where preprocessed features are saved to and loaded from
+    preprocessed_path = 'resnet-14x14.h5'  # path where preprocessed features are saved to and loaded from
     vocabulary_path = 'vocab.json'  # path where the used vocabularies for question and answers are saved to
 
     task = 'OpenEnded'
     dataset = 'mscoco'
+    vqa_data = {}
 
     # preprocess config
     preprocess_batch_size = 64
@@ -35,3 +36,5 @@ class Config:
     lr_halflife = 50000  # in iterations
     data_workers = 8
     max_answers = 3000
+
+    resume = 'model_path'

@@ -2,11 +2,13 @@ import json
 import h5py
 import torch
 import torch.utils.data as data
+from tqdm import tqdm
 
 from ... import utils
 from ..ptext import prepare_answers, prepare_questions
 
 from ailabs import config
+import numpy as np
 
 
 def get_loader(train=False, val=False, test=False):
@@ -56,13 +58,20 @@ class VQA(data.Dataset):
         # q and a
         self.questions = list(prepare_questions(questions_json))
         self.answers = list(prepare_answers(answers_json))
-        self.questions = [self._encode_question(q) for q in self.questions]
-        self.answers = [self._encode_answers(a) for a in self.answers]
+        self.questions = [self._encode_question(q) for q in tqdm(self.questions, desc='Encoding Questions!')]
+        self.answers = [self._encode_answers(a) for a in tqdm(self.answers, desc='Encoding Answers!')]
 
         # v
         self.image_features_path = image_features_path
         self.coco_id_to_index = self._create_coco_id_to_index()
         self.coco_ids = [q['image_id'] for q in questions_json['questions']]
+
+        # get common available data
+        if len(self.coco_id_to_index) != len(self.coco_ids):
+            valid_coco_ids = [i for i, im_id in enumerate(self.coco_ids) if im_id in self.coco_id_to_index]
+            self.questions = [self.questions[i] for i in valid_coco_ids]
+            self.answers = [self.answers[i] for i in valid_coco_ids]
+            self.coco_ids = [self.coco_ids[i] for i in valid_coco_ids]
 
         # only use questions that have at least one answer?
         self.answerable_only = answerable_only

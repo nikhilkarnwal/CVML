@@ -4,6 +4,5 @@ from ailabs import config
 
 
 def process(feature_extractor):
-    if config.dataset == 'vqa2.0':
-        i_execute(feature_extractor)
-        t_execute()
+    i_execute(feature_extractor)
+    t_execute()

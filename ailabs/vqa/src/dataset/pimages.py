@@ -27,7 +27,7 @@ def execute(net: Type[torch.nn.Module]):
         config.output_size
     )
 
-    with h5py.File(config.preprocessed_path, libver='latest') as fd:
+    with h5py.File(config.preprocessed_path, libver='latest', mode='w') as fd:
         features = fd.create_dataset('features', shape=features_shape, dtype='float16')
         coco_ids = fd.create_dataset('ids', shape=(len(loader.dataset),), dtype='int32')
 

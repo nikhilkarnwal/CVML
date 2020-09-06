@@ -5,6 +5,7 @@ import itertools
 
 from .. import utils
 from ailabs import config
+from tqdm import tqdm
 
 
 def execute():
@@ -65,7 +66,7 @@ _punctuation_with_a_space = re.compile(r'(?<= )([{0}])|([{0}])(?= )'.format(_pun
 def prepare_questions(questions_json):
     """ Tokenize and normalize questions from a given question json in the usual VQA format. """
     questions = [q['question'] for q in questions_json['questions']]
-    for question in questions:
+    for question in tqdm(questions, desc='Preparing Questions'):
         question = question.lower()[:-1]
         yield question.split(' ')
 
@@ -93,5 +94,5 @@ def prepare_answers(answers_json):
         s = _period_strip.sub('', s)
         return s.strip()
 
-    for answer_list in answers:
+    for answer_list in tqdm(answers, desc='Preparing Answers!'):
         yield list(map(process_punctuation, answer_list))

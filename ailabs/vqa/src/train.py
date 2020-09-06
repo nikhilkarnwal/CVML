@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 from datetime import datetime
@@ -15,8 +16,7 @@ from tqdm import tqdm
 from ... import config
 from .metrics import compute_accuracy, M3, MeanMeter, MovingMeanMeter
 from .dataset.vqadataset import vqa_dataset
-
-device = 'cpu'
+from . import utils
 
 
 def update_learning_rate(optimizer, iteration):
@@ -46,8 +46,10 @@ def run(net: Type[nn.Module], loader: Type[data.DataLoader],
     loss_module = nn.LogSoftmax().to(config.device)
 
     for v, q, a, indx, q_len in tq:
-        v, q, a, q_len = v.to(device), q.to(device), a.to(device), q_len.to(device)
-        out = net(v, q, q_len)
+        q = q.to(dtype=torch.long)
+        q_len = q_len.to(dtype=torch.long)
+        v, q, a, q_len = v.to(config.device), q.to(config.device), a.to(config.device), q_len.to(config.device)
+        out = net(q, q_len, v)
         loss = -loss_module(out)
         loss = (loss * a / 10).sum(dim=1).mean()
         acc = compute_accuracy(out, a)
@@ -64,15 +66,15 @@ def run(net: Type[nn.Module], loader: Type[data.DataLoader],
             accs.append(acc.view(-1))
 
         loss_m3.update(loss.item())
-        for a in acc:
-            acc_m3.update(a.item())
+        for ac in acc:
+            acc_m3.update(ac.item())
         fmt = '{:.4f}'.format
         tq.set_postfix(loss=fmt(loss_m3.metric), acc=fmt(acc_m3.metric))
         if not train:
             answ = list(torch.cat(answ, dim=0))
             accs = list(torch.cat(accs, dim=0))
             idxs = list(torch.cat(idxs, dim=0))
-        return answ, accs, idxs
+            return answ, accs, idxs
 
 
 def save_net(model, is_best, filename):
@@ -80,36 +82,44 @@ def save_net(model, is_best, filename):
     checkpoint_name = filename + '_checkpoint.pth.tar'
     best_name = filename + '_best_model.pth.tar'
     torch.save(model, checkpoint_name)
+    print('Saved model checkpoint at-{}'.format(checkpoint_name))
     if is_best:
         shutil.copyfile(checkpoint_name, best_name)
+        print('Saved best model at-{}'.format(best_name))
 
 
 def execute():
+    print("Config :")
+    print(utils.print_obj(config))
     if not os.path.exists(config.dir):
         os.mkdir(config.dir)
     filename = '{}/{}'.format(config.dir, datetime.now().strftime('%Y-%m-%d_%H_%M_%S'))
     cudnn.benchmark = True
+    print("Fetching data loader for-{}".format('train'))
+    train_loader = vqa_dataset.get_loader(train=True)
+    print("Fetching data loader for-{}".format('val'))
+    val_loader = vqa_dataset.get_loader(train=False, val=True)
+    net = VQANet(train_loader.dataset.num_tokens, config.embedding,
+                 config.lstm_dim, config.lstm_layer, config.visual_dim,
+                 config.attn_mid_dim, config.glimpses, config.classes).to(config.device)
+    if config.device == 'cuda':
+        net = nn.DataParallel(net)
 
-    train_loader = vqa_dataset.get_loader(config, train=True)
-    val_loader = vqa_dataset.get_loader(config, train=False, val=True)
-    net = nn.DataParallel(
-        VQANet(train_loader.dataset.num_tokens, config.embedding,
-               config.lstm_dim, config.lstm_layer, config.visual_dim,
-               config.attn_mid_dim, config.glimpses, config.classes)).to(config.device)
-
+    print(net)
     m3 = M3()
     total_itr = 0
-    best_loss = 0.0
+    best_loss = 1e6
     start_epoch = 0
     optimizer = torch.optim.Adam([p for p in net.parameters() if p.requires_grad])
     if config.resume:
+        print('Loading save model from-{}'.format(config.resume))
         model = torch.load(config.resume)
         start_epoch = model['epoch']
         total_itr = model['total_iteration']
         best_loss = model['loss']
         optimizer.load_state_dict(model['optimizer'])
         net.load_state_dict(model['state_dict'])
-        m3.decode(model['m3'])
+        # m3.decode(model['m3'])
 
     for i in range(start_epoch, config.epochs):
         res_t = run(net, train_loader, optimizer, m3, True, i, total_itr)

@@ -18,5 +18,5 @@ class TextNet(nn.Module):
             packed_seq = pack_padded_sequence(embedding, query_lens, batch_first=batch_first)
         else:
             packed_seq = embedding
-        _, (h, _) = self.lstm(packed_seq, batch_first=batch_first)
+        _, (h, _) = self.lstm(packed_seq)
         return h
