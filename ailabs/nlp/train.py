@@ -44,8 +44,8 @@ def run(encoder, decoder, encoder_optimizer, decoder_optimizer,
         decoder.train()
     tq = tqdm(loader, desc='Running Model-Epoch:{}'.format(epochs))
     start_token, end_token = loader.dataset.get_start_end()
-    start_token = torch.LongTensor([start_token], device=config.device)
-    end_token = torch.LongTensor([end_token], device=config.device)
+    start_token = torch.LongTensor([start_token]).to(device=config.device)
+    end_token = torch.LongTensor([end_token]).to(device=config.device)
     criterion = nn.NLLLoss()
     loss_meter = MeanMeter()
     for indx, inp, out in tq:
